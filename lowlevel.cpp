@@ -15,7 +15,9 @@
 /////////////////////////////////// PARSE FUNCS ///////////////////////////////////
 //###############################################################################//
 
-// Call the tokenizer to start parsing
+/////////////////////////////////////////
+// Call the tokenizer to start parsing //
+/////////////////////////////////////////
 void LowLevel::tokenizer(std::string input){
     if(*stringIter == 0) input += " ";
     regulateCharStream(input);
@@ -38,6 +40,7 @@ void LowLevel::regulateCharStream(std::string input){
 
 std::string LowLevel::grabNum(std::string input){
     std::string temp = "";
+    regulateCharStream(input);
     while(input[*stringIter] != ' ' || input[*stringIter] == '\0'){
         // Check if input is a number
         if((int)input[*stringIter] >= ASCII_NUM_OFFSET_L && (int)input[*stringIter] <= ASCII_NUM_OFFSET_R){
@@ -51,6 +54,7 @@ std::string LowLevel::grabNum(std::string input){
 // Why makes two different grabs? Reaffirmation
 std::string LowLevel::grabCommand(std::string input){
     std::string temp = "";
+    regulateCharStream(input);
     while(input[*stringIter] != ' ' || input[*stringIter] == '\0'){
         temp += input[*stringIter];
         ++*stringIter;
@@ -60,6 +64,7 @@ std::string LowLevel::grabCommand(std::string input){
 
 bool LowLevel::opCheck(std::string input){
     bool flag = false;
+    regulateCharStream(input);
     for(int i = 0; i < operatorArray.size(); ++i){
         if(input == operatorArray[i]){
             flag = true;
@@ -69,14 +74,19 @@ bool LowLevel::opCheck(std::string input){
     return flag;
 }
 
-//###############################################################################//
-/////////////////////////////////// PARSE FUNCS ///////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////
-
-
 ///////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////// MAIN ROUT ////////////////////////////////////
 //###############################################################################//
+
+command_table LowLevel::hashTableCom(std::string input){
+    if(input == "PrintStack") return PrintStack;
+    if(input == "PrintTop") return PrintTop;
+    if(input == "Load") return Load;
+    if(input == "Math") return Math;
+    if(input == "Stack") return Stack;
+    if(input == "Var") return Var;
+    else return ErrorCom;
+}
 
 void LowLevel::interpreter(std::string input, std::string fileInputStream){
     switch(hashTableCom(input)){
@@ -100,18 +110,17 @@ void LowLevel::interpreter(std::string input, std::string fileInputStream){
             stackF(fileInputStream);
             break;
         }
+        case Var:{
+            varF(input, fileInputStream);
+            break;
+        }
         default:{
             // Unrecognized command handler
             printf("Unrecognized Command at Char %lu: %s\n", (*stringIter-input.length()+1), input.c_str());
-            //delete stringIter;// Replaced with smart pointer yay
             exit(EXIT_FAILURE);
         }
     }
 }
-
-//###############################################################################//
-//////////////////////////////////// MAIN ROUT ////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////// MATH FUNCS ///////////////////////////////////
@@ -128,8 +137,9 @@ math_table LowLevel::hashTableMth(std::string input){
 
 void LowLevel::math(std::string input){
     std::string temp = "";
-    load(input); // Load first num on stack
-    regulateCharStream(input); // regulate char stream
+    if(!grabvar(input)){ // excepts for varibles
+        load(input); // Load first num on stack
+    }
     temp = grabCommand(input); // get operator
     while(opCheck(temp)){ // check operator
         switch(hashTableMth(temp)){
@@ -159,7 +169,6 @@ void LowLevel::math(std::string input){
                 exit(EXIT_FAILURE);
             }
         }
-        regulateCharStream(input);
         temp = grabCommand(input);
     }
     *stringIter -= temp.length()+1;
@@ -167,7 +176,10 @@ void LowLevel::math(std::string input){
 
 void LowLevel::pls(std::string input){
     long long tempNum = 0;
-    load(input); // load next num on stack
+    
+    if(!grabvar(input)){ // excepts for varibles
+        load(input); // Load first num on stack
+    }
     tempNum = stack.top(); // place into temp
     stack.pop(); // pop top
     tempNum += stack.top(); // add
@@ -177,7 +189,9 @@ void LowLevel::pls(std::string input){
 
 void LowLevel::mns(std::string input){
     long long tempNum = 0;
-    load(input);
+    if(!grabvar(input)){
+        load(input);
+    }
     long long tempNumTwo = 0;
     tempNumTwo = stack.top();
     stack.pop();
@@ -189,7 +203,9 @@ void LowLevel::mns(std::string input){
 
 void LowLevel::mlt(std::string input){
     long long tempNum = 0;
-    load(input);
+    if(!grabvar(input)){ // excepts for varibles
+        load(input); // Load first num on stack
+    }
     tempNum = stack.top();
     stack.pop();
     tempNum *= stack.top();
@@ -199,7 +215,9 @@ void LowLevel::mlt(std::string input){
 
 void LowLevel::div(std::string input){
     long long tempNum = 0;
-    load(input);
+    if(!grabvar(input)){ // excepts for varibles
+        load(input); // Load first num on stack
+    }
     tempNum = stack.top();
     stack.pop();
     tempNum /= stack.top();
@@ -214,10 +232,6 @@ void LowLevel::srt(){
     stack.push(tempNumFloat);
 }
 
-//###############################################################################//
-/////////////////////////////////// MATH FUNCS ////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////
-
 ///////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// STACK FUNCS ///////////////////////////////////
 //###############################################################################//
@@ -231,17 +245,7 @@ stack_table LowLevel::hashTableStk(std::string input){
     else return ErrorStk;
 }
 
-command_table LowLevel::hashTableCom(std::string input){
-    if(input == "PrintStack") return PrintStack;
-    if(input == "PrintTop") return PrintTop;
-    if(input == "Load") return Load;
-    if(input == "Math") return Math;
-    if(input == "Stack") return Stack;
-    else return ErrorCom;
-}
-
 void LowLevel::stackF(std::string input){
-    regulateCharStream(input);
     std::string command = grabCommand(input);
     if(stack.size() > 0){
         switch(hashTableStk(command)){
@@ -339,7 +343,6 @@ void LowLevel::topPrint(){
 
 void LowLevel::load(std::string input){
     std::string temp = "";
-    regulateCharStream(input);
     temp = grabNum(input);
     if(temp.length() > 0){
         signed long long strtoi;
@@ -353,18 +356,75 @@ void LowLevel::load(std::string input){
     }
 }
 
-//###############################################################################//
-/////////////////////////////////// STACK FUNCS ///////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////
-
 ///////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// VARIABLE FUNCS /////////////////////////////////
 //###############################################################################//
 
-void LowLevel::var(){
-    
+variable_table LowLevel::hashTableVar(std::string input){
+    if(input == "Var") return vari;
+    else return ErrorVar;
 }
 
-//###############################################################################//
-////////////////////////////////// VARIABLE FUNCS /////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////
+void LowLevel::varF(std::string input, std::string inputGlob){
+    switch(hashTableVar(input)){
+        case vari:{
+            var(inputGlob);
+            break;
+        }
+        default:{
+            // Unrecognized command handler
+            printf("Unrecognized VAR Command at Char %lu: %s\n", (*stringIter-input.length()+1), input.c_str());
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void LowLevel::var(std::string input){
+    variable<signed long long> v;
+    v.name = grabCommand(input);
+    std::string e = grabCommand(input);
+    if(e == "="){
+        load(input); // Loading onto stack *temporarily* to handle lexigraphical casting
+        v.value = stack.top();
+        stack.pop();
+        varstk.push_back(v);
+    }
+    else{
+        printf("Syntax Error %s operator not recognized\n", e.c_str());
+        exit(EXIT_FAILURE);
+    }
+    sortvar();
+}
+
+void LowLevel::sortvar(){ // Bubble sort used as vector treated as "nearly sorted"
+    bool flag = true;
+    for(int i = 1; (i <= varstk.size()) && flag; ++i){
+        flag = false;
+        for(int j = 0; j < (varstk.size() - 1); ++j){
+            if(varstk[j+1].name < varstk[j].name){
+                std::swap(varstk[j], varstk[j+1]);
+                flag = true;
+            }
+        }
+    }
+}
+
+bool LowLevel::grabvar(std::string input){
+    std::string pulledString = grabCommand(input);
+    unsigned int lowbound = 0, upperbound = (unsigned int)varstk.size(), searchpoint = upperbound/2;
+    while(varstk[searchpoint].name != pulledString && lowbound < upperbound){
+        if(varstk[searchpoint].name > pulledString){
+            upperbound = searchpoint - 1;
+        }
+        else{
+            lowbound = searchpoint + 1;
+        }
+        searchpoint = (lowbound + upperbound) / 2;
+    }
+    if(lowbound <= upperbound){
+        // searchpoint now holds the variable index
+        stack.push(varstk[searchpoint].value);
+        return true;
+    }
+    return false;
+}

@@ -16,6 +16,7 @@
 #include <stack>
 #include <memory>
 #include <array>
+#include <algorithm>
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -25,7 +26,8 @@ enum command_table{
     PrintTop,
     Load,
     Math,
-    Stack
+    Stack,
+    Var
 };
 
 enum math_table{
@@ -46,13 +48,24 @@ enum stack_table{
     rotate
 };
 
+enum variable_table{
+    ErrorVar = -1,
+    vari
+};
+
+template<typename T>
+struct variable{
+    std::string name;
+    T value;
+};
+
 class LowLevel {
 private:
+    std::vector<variable<signed long long> > varstk;
     std::stack<signed long long> stack;
     // updating to a parse tree in the future (!!)
     // Keeps track of the file pointer position
-    //int *stringIter = new int(0);
-    std::unique_ptr<int> stringIter{new int(0)}; // Pointers are scary after all
+    std::unique_ptr<int> stringIter{new int(0)};
     
     const std::array<std::string, 5> operatorArray = {"+", "-", "*", "/", "sqrt"}; // Allows for equation chaining
     
@@ -81,7 +94,10 @@ public:
     void ovr();
     void rot();
     // Main::Variable Functions
-    void var();
+    void varF(std::string input, std::string inputGlob);
+    void var(std::string input);
+    void sortvar();
+    bool grabvar(std::string input);
     // Grab next thing functions
     std::string grabNum(std::string input);
     std::string grabCommand(std::string input);
@@ -89,6 +105,7 @@ public:
     command_table hashTableCom(std::string input);
     math_table hashTableMth(std::string input);
     stack_table hashTableStk(std::string input);
+    variable_table hashTableVar(std::string input);
 };
 
 #endif /* defined(__LowLevel__lowlevel__) */

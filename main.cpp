@@ -12,5 +12,5 @@
 int main(int argc, const char * argv[]) {
     LowLevel lang;
     
-    lang.tokenizer("Math 1 + 1 + 444 - 4 PrintStack");
+    lang.tokenizer("Var f_to_c = 8 PrintStack");
 }
